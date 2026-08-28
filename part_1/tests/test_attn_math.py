@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from single_head import SingleHeadAttention
+from single_head import SingleHeadSelfAttention
 
 #mirror the tiny example in the attn_numpy_demo.py
 
