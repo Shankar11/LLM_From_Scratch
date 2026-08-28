@@ -42,10 +42,10 @@ if __name__ == "__main__":
     k = k.transpose(1,2)
     v = v.transpose(1,2)
 
-    log(f"transpose heads: q={tuple(q.shape)} k={tuple(k.shape(k))} v={tuple(v.shape)} = (B, heads, T, d_head)")
+    log(f"transpose heads: q={tuple(q.shape)} k={tuple(k.shape)} v={tuple(v.shape)} = (B, heads, T, d_head)")
 
     scale = 1.0 / math.sqrt(d_head)
-    scores = torch.matmul(q, k.transpose(-2,1))* scale
+    scores = torch.matmul(q, k.transpose(-2,-1))* scale
     log(f"scores q@k^T:  {tuple(scores.shape)} = (B, heads, T, T)")
 
     weights = torch.softmax(scores, dim=-1)

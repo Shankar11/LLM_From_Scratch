@@ -20,7 +20,7 @@ class MultiHeadSelfAttention(nn.Module):
     merge:      (B, T, n_head*d_head) = (B, T, d_model)
     """
 
-    def __intial__(self, d_model: int, n_head:int, dropout:float =0.0, trace_shapes:bool = True):
+    def __init__(self, d_model: int, n_head:int, dropout:float =0.0, trace_shapes:bool = True):
         super().__init__()
         assert d_model % n_head == 0 , "d_model must be divisible by n_head"
         self.n_head = n_head
