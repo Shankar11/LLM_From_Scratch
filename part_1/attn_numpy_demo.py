@@ -42,9 +42,9 @@ Q= X @ Wq #(1,3,2)
 K= X @ Wk #(1,3,2)
 V= X @ Wv #(1,3,2)
 
-print("Q shape: " Q.shape, "\nQ=\n", Q[0])
-print("K Shape: " K.shape, "\nK=\n", K[0])
-print("V Shape: " V.shape, "\nV=\n", V[0])
+print("Q shape: ", Q.shape, "\nQ=\n", Q[0])
+print("K Shape: ", K.shape, "\nK=\n", K[0])
+print("V Shape: ", V.shape, "\nV=\n", V[0])
 
 # Scaled dot-products
 scale = 1.0 / np.sqrt(Q.shape[-1])
@@ -61,4 +61,4 @@ print("Weights shape: ", weights.shape, "\n Attention weights (causal)= \n", wei
 
 #Weighted sum of V
 out = weights @ V # (1,3,2)
-print("Output shape: ". out.shape, "\nOutput=\n", out[0])
+print("Output shape: ", out.shape, "\nOutput=\n", out[0])

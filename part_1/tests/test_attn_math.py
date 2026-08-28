@@ -34,7 +34,7 @@ def test_single_head_matches_numpy():
         attn.k.weight.copy_(torch.tensor(Wk).t())
         attn.v.weight.copy_(torch.tensor(Wv).t())
 
-    out, W = attn(X)
+    out, w = attn(X)
     assert out.shape == (1,3,2)
     #Basic  numeric sanity
     assert torch.isfinite(out).all()

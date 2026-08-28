@@ -1,7 +1,7 @@
 import math
 import torch
 import torch.nn as nn
-import torch.nn.functional as f
+import torch.nn.functional as F
 from attn_mask import causal_mask
 
 class MultiHeadSelfAttention(nn.Module):
