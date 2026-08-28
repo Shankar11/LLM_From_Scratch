@@ -21,7 +21,7 @@ def main():
     run("python attn_numpy_demo.py")
 
     #1.3/1.4 unit tests
-    run("python -m pytest -q tests/test_attn_numpy.py")
+    run("python -m pytest -q tests/test_attn_math.py")
     run("python -m pytest -q tests/test_causal_mask.py")
 
     #Matrix math walkthrough for MHA 

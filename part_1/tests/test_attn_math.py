@@ -8,20 +8,20 @@ X = np.array([[[0.1, 0.2, 0.3, 0.4],
                [0.5, 0.4, 0.3, 0.2],
                [0.0, 0.1, 0.0, 0.1]]], dtype = np.float32)
 
-Wq = np.array([[[0.2, -0.1],
+Wq = np.array([[0.2, -0.1],
                [0.0, 0.1],
                [0.1, 0.2],
-               [-0.1, 0.0]]], dtype = np.float32)
+               [-0.1, 0.0]], dtype = np.float32)
 
-Wk = np.array([[[0.1, 0.1],
+Wk = np.array([[0.1, 0.1],
                [0.0, -0.1],
                [0.2, 0.0],
-               [0.0, 0.2]]], dtype = np.float32)
+               [0.0, 0.2]], dtype = np.float32)
 
-Wv = np.array([[[0.1, 0.0],
+Wv = np.array([[0.1, 0.0],
                [-0.1, 0.1],
                [0.2, -0.1],
-               [0.0, 0.2]]], dtype = np.float32)
+               [0.0, 0.2]], dtype = np.float32)
 
 
 def test_single_head_matches_numpy():
@@ -34,7 +34,7 @@ def test_single_head_matches_numpy():
         attn.k.weight.copy_(torch.tensor(Wk).t())
         attn.v.weight.copy_(torch.tensor(Wv).t())
 
-    out, w = attn(X)
+    out, w = attn(x)
     assert out.shape == (1,3,2)
     #Basic  numeric sanity
     assert torch.isfinite(out).all()

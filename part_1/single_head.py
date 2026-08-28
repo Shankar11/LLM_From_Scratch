@@ -14,8 +14,8 @@ class SingleHeadSelfAttention(nn.Module):
         self.q = nn.Linear(d_model, d_k, bias=False)
         self.k = nn.Linear(d_model, d_k, bias=False)
         self.v = nn.Linear(d_model, d_k, bias=False)
-        self.dropout == nn.Dropout(dropout)
-        self.trace_shapes == trace_shapes
+        self.dropout = nn.Dropout(dropout)
+        self.trace_shapes = trace_shapes
 
     def forward(self, x:torch.Tensor): # x: (B, T, d_model)
         B, T, __ = x.shape
