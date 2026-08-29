@@ -51,12 +51,12 @@ def main():
 
     tok = ByteTokenizer()
     ds = ByteDataset(args.data, block_size=args.block_size)
-    model = GPT(tok.vocab_size, args.block_size, args.n_layer, args.n_head, args.n_embed, args.dropout).to(args.device)
+    model = GPT(tok.vocab_size, args.block_size, args.n_layer, args.n_head, args.n_embd, args.dropout).to(args.device)
 
     if args.compile and hasattr(torch, 'compile'):
         model = torch.compile(model)
 
-    opt = torch.optim.adamw(model.parameters(), lr=args.lr, betas=(0.9, 0.95), weight_decay=args.weight_decay)
+    opt = torch.optim.AdamW(model.parameters(), lr=args.lr, betas=(0.9, 0.95), weight_decay=args.weight_decay)
     scaler = torch.cuda.amp.GradScaler(enabled=(args.amp and args.device_type == 'cuda'))
 
     best_val = float('inf')
