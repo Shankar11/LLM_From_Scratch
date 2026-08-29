@@ -36,7 +36,7 @@ def main():
             xb, yb = ds.get_batch('val', args.batch_size, device)
             _, loss = model(xb, yb)
             losses.append(loss.item())
-    print(f"val loss: " {sum(losses)/len(losses):.4f})
+    print(f"val loss:  {sum(losses)/len(losses):.4f}")
 
 if __name__ =='__main__':
     main()

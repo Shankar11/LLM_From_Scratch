@@ -22,7 +22,7 @@ def main():
     if prompt_ids.numel() ==0:
         #if no prompt provided , seed with newline byte (10)
         prompt_ids = torch.Tensor([[10]], dtype=torch.long, device = device)
-
+    print(f"args.ckpt {args.ckpt}")
     ckpt = torch.load(args.ckpt, map_location=device)
     config = ckpt.get('config', None)
 
