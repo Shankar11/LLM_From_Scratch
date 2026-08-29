@@ -13,7 +13,7 @@ def run(cmd:str):
 if __name__ == '__main__':
     # quick smoke training on a tiny file path tiny_hi.txt; adjust as needed
     run("python train.py --data tiny_hi.txt --steps 400 --sample_every 100 "
-    "--eval_internal 100 --batch_size 32 --block_size 128 --n_layer 2 --n_head 2 --n_embed 128")
+    "--eval_interval 100 --batch_size 32 --block_size 128 --n_layer 2 --n_head 2 --n_embd 128")
 
     #sample from the best checkpoint 
     run(f"python sample.py --ckpt {RUNS}/model_best.pt --tokens 200 --prompt 'Once upon a time' ")

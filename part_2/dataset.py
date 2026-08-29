@@ -18,7 +18,7 @@ class ByteDataset():
         self.block_size = block_size
 
     def get_batch(self, which : str, batch_size: int, device: torch.device):
-        buf = self.train if which =='train' else self.eval
+        buf = self.train if which =='train' else self.val
         assert len(buf) > self.block_size+1, 'file too small for given block size'
         ix = torch.randint(0, len(buf) - self.block_size-1,(batch_size,))
         x = torch.stack([buf[i:i+self.block_size] for i in ix])

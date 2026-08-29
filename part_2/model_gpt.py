@@ -24,7 +24,7 @@ class CausalSelfAttention(nn.Module):
         v = v.transpose(1, 2)
         scale = 1.0/ math.sqrt(self.d_head)
         # Pytorch SDPA (uses flash when available)
-        y = F.scaled_dot_product_attention(q, k, v, attn_mask=None, dropout_p= self.dropout if self.training else 0.0 , is_causal=True)
+        y = F.scaled_dot_product_attention(q, k, v, attn_mask=None, dropout_p= self.dropout.p if self.training else 0.0 , is_causal=True)
         y = y.transpose(1,2).contiguous().view(B, T, C)
         y = self.proj(y)
         return y

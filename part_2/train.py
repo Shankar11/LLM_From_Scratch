@@ -12,7 +12,7 @@ def estimate_loss(model: GPT, ds: ByteDataset, args) -> dict:
     with torch.no_grad():
         for split in ['train','val']:
             losses = []
-            for _ in range(args.eval.iters):
+            for _ in range(args.eval_iters):
                 xb, yb = ds.get_batch(split, args.batch_size, args.device)
                 _, loss = model(xb, yb)
                 losses.append(loss.item())
@@ -70,7 +70,7 @@ def main():
         scaler.scale(loss).backward()
         if args.grad_clip >0:
             scaler.unscale_(opt)
-            torch.nn.utils.clip_grad_norm_(model.parameters, args.grad_clip)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip)
         scaler.step(opt)
         scaler.update()
 
@@ -97,7 +97,7 @@ def main():
 
 
         if args.sample_every > 0 and step % args.sample_every ==0:
-            start = torch.radint(low=0, high=len(ds.train) - args.block_size -1 ,size=(1,)).item()
+            start = torch.randint(low=0, high=len(ds.train) - args.block_size -1 ,size=(1,)).item()
             seed = ds.train[start:start + args.block_size].unsqueeze(0).to(args.device)
             out = model.generate(seed, max_new_tokens=args.sample_tokens, temperature = args.temperature, top_k=args.top_k, top_p=args.top_p)
             txt = tok.decode(out[0].cpu())
