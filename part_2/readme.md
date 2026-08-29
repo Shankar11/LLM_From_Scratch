@@ -1,7 +1,7 @@
 ```markdown
 ## Repository Layout (part 2)
 
-```text
+```
 part_2/
 ├── orchestrator.py     # runs quick smoke-train+eval +sample
 ├── tokenizer.py        # 2.1 byte-level tokenizer (0..255)
@@ -28,9 +28,5 @@ All imports are **LOCAL**. Run commands from inside the `part_2/` directory.
 cd part_2
 python train.py --data tiny.txt --steps 300 --sample_every 100
 python sample.py --ckpt runs/min-gpt/model_best.pt --tokens 200 --prompt "Once upon a time"
-
-```
-
-```
 
 ```
