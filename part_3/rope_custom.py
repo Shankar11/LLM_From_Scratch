@@ -12,7 +12,7 @@ class RoPECache:
         self.head_dim = head_dim
         self.base = base
         self.device = device
-        seld._build(max_pos)
+        self._build(max_pos)
 
     def get(self, positions: torch.Tensor):
         # positions: (T,) or (1,T)
