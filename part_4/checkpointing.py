@@ -210,3 +210,100 @@ def _verify_model_matches(model, cfg:Dict[str, Any]) -> Tuple[bool, str]:
     """
     Return (ok, message)
     """
+    expected = {
+        "block_size": cfg.get("block_size"),
+        "n_layer": cfg.get("n_layer"),
+        "n_head": cfg.get("n_head"),
+        "n_embd" : cfg.get("n_embd"),
+        "vocab_size" : cfg.get("vocab_size"),
+        "n_kv_cache" : cfg.get("n_kv_head", cfg.get("n_head")),
+    }
+    got = {
+        "block_size" : int(getattr(model, "block_size" , -1)),
+        "n_layer" : int(len(model.blocks)),
+        "vocab_size" : int(model.tok_emb.num_embeddings),
+        }
+    first_blk = model.blocks[0]
+    got.update({
+        "n_head": int(first_blk.attn.n_head),
+        "n_embd": int(first_blk.attn.n_head * first_blk.attn.d_head),
+        "n_kv_head": int(getattr(first_blk.attn, "n_kv_head", first_blk.attn.n_head)),
+    })
+    diffs = [f"{k}: ckpt = {expected[k]} vs model={got[k]}" for k in expected if expected[k] != got[k]]
+    if diffs:
+        return False, "Architecute mismatch:\n " + "\n ".join(diffs)
+    return True, "ok"
+
+def save_checkpoint(model, optimizer, scheduler, amp, step: int, out_dir: str, 
+                     tokenizer_dir: str | None = None, config:dict | None = None):
+
+    out = Path(out_dir); out.mkdir(parents = True, exist_ok=True)
+    #Prefer the model's own config if available (e.g. a dict or dataclass with _dict_/asdict)
+    if hasattr(model, "config"):
+        cfg_obj = model.config
+        cfg = dict(cfg_obj) if isinstance(cfg_obj, dict) else getattr(cfg_obj, "__dict__", None) or _extract_config_from_model(model)
+
+    torch.save({
+        "model": model.state_dict(),
+        "optimizer" : optimizer.state_dict() if optimizer is not None else None,
+        "scheduler" : scheduler.state_dict() if hasattr(scheduler, "state_dict") else None,
+        "amp_sclaer": amp.scaler.state_dict() if amp and getattr(amp, "scaler", None) else None,
+        "step" : int(step),
+        "config": cfg, # <- always write config
+        "version": "part4-v2",
+    }, out / DEF_NAME)
+
+    if tokenizer_dir is not None:
+        (out / "tokenizer_dir.txt").write_text(tokenizer_dir)
+
+
+def load_checkpoint(model, path:str, optimizer = None, scheduler=None, amp=None, strict: bool = True):
+    ckpt = torch.load(path, map_location="cpu")
+
+    cfg = ckpt.get("config")
+    if cfg:
+        ok ,msg = _verify_model_matches(model, cfg)
+        if not ok:
+            raise RuntimeError(msg + "\nRebuild the model with this config, or load with strict=False")
+        else:
+            # Legacy checkpoint without config: strongly encourage a rebuild step elsewhere
+            print("[compact] Warning: checkpoint has no config; cannot verify architecture.")
+
+        missing, unexpected = model.load_state_dict(ckpt["model"], strict=strict)
+        if strict and ( missing or unexpected):
+            raise RuntimeError(f"State dict mismatch:\n missing: {missing}\n unexpected: {unexpected}")
+
+        if optimizer is not None and ckpt.get("optimizer") is not None:
+            optimizer.load_state_dict(ckpt["optimizer"])
+        if scheduler is not None and ckpt.get("scheduler") is not None and hasattr(scheduler, "load_state_dict"):
+            scheduler.load_state_dict(ckpt["scheduler"])
+        if amp is not None and ckpt.get("amp_scaler") is not None and getattr(amp, "scaler", None):
+            amp.scaler.load_state_dict(ckpt["amp_scaler"])
+
+        return ckpt.get("step", 0)
+
+#---- checkpoint / save utils ---------------#
+
+def checkpoint_paths(out_dir: Path, step: int):
+    return out_dir / f"model_step{step:07d}.pt" , out_dir / "model_last.pt"
+
+def atomic_save_all(model, optim, sched, amp, step:int, out_dir:Path, tok_dir:str | None, keep_last_k: int, config:dict):
+    """
+    Write model_last.pt (with config) + a rolling per-step copy
+    """
+    save_checkpoint(model, optim, sched, amp, step, str(out_dir), tok_dir, config=config) # wrtires model_last.pt
+    per_step , last = checkpoint_paths(out_dir, step)
+    try:
+        shutil.copy2(last, per_step)
+    except Exception:
+        pass
+    #GC old per-step checkpoints
+
+    try:
+        ckpts = sorted(out_dir.glob("model_step*.pt"))
+        for old in ckpts[:-keep_last_k]:
+            old.unlink(missing_ok=True)
+    except Exception:
+        pass
+
+    
