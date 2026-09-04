@@ -67,7 +67,7 @@ class TBLogger(NoopLogger):
                     else:
                         #small-ish tensors => histogram
                         if numel <=self._auto_hist_max_elems:
-                            self.w.add_histogram(k, v.detach().cpu) if is_torch else v , global_step=step)
+                            self.w.add_histogram(k, v.detach().cpu() if is_torch else v , global_step=step)
                         else:
                             # fall back to scalar summary stats
                             arr = v.detach().cpu().flatten().numpy() if is_torch else v.flatten()

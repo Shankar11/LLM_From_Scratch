@@ -128,8 +128,8 @@ def main():
                 f"Tokenizer vocab ({vocab_size}) != checkpoint config vocab ({cfg_build.get('vocab_size')})"
                 "This deterministic script forbids vocab changes on resume"
             )
-    ekse:
-    cfg_build = run_cfg_from_args(args, vocab_size)
+    else:
+        cfg_build = run_cfg_from_args(args, vocab_size)
 
     #-- init model/opt/sched/amp -------
     model = GPTModern(**cfg_build).to(device)
