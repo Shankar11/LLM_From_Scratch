@@ -76,3 +76,128 @@ def main():
     prompts = sample_prompts(16)
 
     step =0
+    while step < args.steps:
+        #--collect rollout batch
+        batch_prompts = prompts[ (step*args.batch_size) %len(prompts) : ((step+1)*args.batch_size) % len(prompts)]
+        if len(batch_prompts) < args.batch_size:
+            batch_prompts += prompts[:args.batch_size - len(batch_prompts)]
+        texts= [format_prompt_only(p).replace("</s>", "") for p in batch_prompts]
+        in_ids = [tok.encode(t) for t in texts]
+
+        with torch.no_grad():
+            out_ids = []
+            for i, x in enumerate(in_ids):
+                idx = torch.tensor([x], dtype=torch.long, device=device)
+                out = policy.generate(idx, max_new_tokens = args.resp_len, temperature=0.2, top_k=3)
+                out_ids.append(out[0].tolist())
+
+        #split prompt/response per sample
+        data = []
+        for i, prompt in enumerate(batch_prompts):
+            full = out_ids[i]
+            #find boundary: index where prompt ends in the tokenized form
+            # use original prompt tokenization length (clipped by block size)
+            p_ids = in_ids[i][-block_size:]
+            boundary = len(p_ids)
+            resp_ids = full[boundary:]
+            #compute rewards via RM on formatted prompt + response text
+            resp_text = tok.decode(resp_ids)
+            r_scalar = compute_reward(rm, tok, prompt, resp_text, device)
+            data.append((torch.tensor(full, dtype=torch.long), boundary,r_scalar))
+
+        #pad to same lenght
+        policy_ctx = getattr(policy, "block_size", block_size)
+        max_len = min(policy_ctx, max(t[0].numel() for t in data))
+        B = len(data)
+        seq = torch.zeros(B, max_len, dtype=torch.long, device=device)
+        mask = torch.zeros(B, max_len, dtype=torch.bool, device=device)
+        last_idx = torch.zeros(B, dtype=torch.long, device=device)
+        rewards = torch.zeros(B, max_len, dtype=torch.float, device=device)
+
+        for i, (ids,boundary,r_scalar) in enumerate(data):
+            L_full = ids.numel()
+            L = min(L_full, max_len)
+            drop = L_full - L               #tokens dropped from the left
+            b = max(0, boundary - drop)     # shift boundary after left-trim
+            seq[i,:L] = ids[-L:]
+            if L < max_len:
+                seq[i,L:] =2 #fill remaining positions with <pad> token
+            mask[i, b:L] = True
+            rewards[i,L-1] = r_scalar
+            last_idx[i] = L-1
+
+        #Logprobs & values for policy and reference
+        #model_logprobs retruns (B, T-1) for next-token logp; align to seq[:,1:]
+        pol_lp = model_logprobs(policy, seq)
+        ref_lp = model_logprobs(ref, seq)
+        #values for seq positions (B,T)
+        with torch.no_grad():
+            logits, values, _ = policy(seq, None)
+        values = values[:,:-1] # align to pol_lp
+
+        #select only action positions
+        act_mask = mask[:,1:] #since logprobs are for predicting token t from <=t-1
+        old_logp = pol_lp[act_mask].detach()
+        ref_logp = ref_lp[act_mask].detach()
+        old_values = values[act_mask].detach()
+
+        #KL per action token and shaped rewards
+        kl = (old_logp - ref_logp)
+        shaped_r = rewards[:,1:][act_mask] - args.kl_coef * kl # penalty for drifting
+
+        #compute advantages/returns with last-step bootstrap =0 (episodic per response)
+        # flatten by sequence order inside wach sample; we'll approximate by grouping tokens persample using last_idx.
+        #for tutorial  simplicity, treat advantages = shaped_r - old_values (no GAE), works only for end-only reward.
+        returns = shaped_r #target value = immediate shaped reward
+        adv = returns - old_values
+        #normalize adv
+        adv = (adv- adv.mean())/ (adv.std().clamp_min(1e-6))
+
+        #--update (single pass ppo for demo)--
+        #this step is done multiple times per batch in practice
+        policy.train()
+        logits_new, values_new_full, _ = policy(seq, None)
+        logp_full = torch.log_softmax(logits_new[:,:-1], dim=-1)
+        labels = seq[:,1:]
+        new_logp_all = logp_full.gather(-1, labels.unsqueeze(-1)).squeeze(-1)
+        new_logp = new_logp_all[act_mask]
+        new_values = values_new_full[:,:-1][act_mask]
+
+        from ppo_loss import ppo_losses
+        out_loss = ppo_losses(new_logp, old_logp, adv, new_values, old_values,returns,
+                              clip_ratio=0.2,vf_coef=0.5, ent_coef=0.0)
+        loss = out_loss.total_loss
+        opt.zero_grad(set_to_none=True)
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(policy.parameters(), 1.0)
+        opt.step()
+        policy.eval()
+
+        with torch.no_grad():
+            #KL(old || new): movement of the updated policy from the snapshot used tp collect data
+            lp_post = model_logprobs(policy, seq)       #(B, T-1)
+            lp_post = lp_post[act_mask]                 #only action positions
+            kl_post = (old_logp - lp_post).mean()       # ≈ E[log π_old - log π_new]
+            #KL(now || ref): how far the current policy is from the frizen reference
+            lp_now = lp_post                            # already computed above on the same positions
+            kl_ref_now = (lp_now - ref_logp).mean()     #≈ E[log π_now - log π_ref]
+
+        step +=1
+        if step % 10 ==0:
+            print(f"step {step} | loss { loss.item():.4f}"
+                  f"| value loss {out_loss.value_loss.item():.4f}"
+                  f"| KL_move {kl_post.item():.6f} | KL_ref {kl_ref_now.item():.6f}"
+                  )
+
+    Path(args.out).mkdir(parents=True, exist_ok=True)
+    torch.save({'model': policy.state_dict(), 'config':{
+        'vocab_size': vocab_size,
+        'block_size': block_size,
+        'n_layer': n_layer,
+        'n_head': n_head,
+        'n_embd': n_embd,
+    }}, str(Path(args.out)/'model_last.pt'))
+    print(f"Saved PPO policy to {args.out}/model_last.pt")
+
+if __name__ == '__main__':
+    main()
