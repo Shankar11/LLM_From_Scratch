@@ -81,5 +81,44 @@ def main():
     pool_idx = 0
     G = args.group_size
 
-    while
+    while step < args.steps:
+        #--SELECT PROMPTS ---
+        # Choose P prompts, each will yield G completions -> B = P*G trajectories
+        P= max(1, args.batch_prompts)
+        if pool_idx + P > len(prompts_pool):
+            pool_idx=0
+        batch_prompts = prompts_pool[pool_idx: pool_idx + P]
+        pool_idx += P
+
+        #Tokenize prompt-only texts
+        prompt_texts = [format_prompt_only(p).replace("</s>","") for p in batch_prompts]
+        prompt_in_ids = [tok.encode(t) for t in prompt_texts]
+
+        #-- GENERATE G COMPLETIONS PER  PROMPT ---
+        # We will collect all trajectories flat, but track their group/prompt ids.
+        seq_list =[]            #list[Tensor of token ids]
+        boundary_list =[]       # index where repsonse starts in the (possible clipped) sequence
+        prompt_id_of =[]        # which prompt this trajectory belongs to (0..P-1)
+        raw_rewards=[]          # scalar reward per trajectory (before KL shaping)
+        last_idx_list=[]        # for padding bookkeeping
+
+        with torch.no_grad():
+            for pid, p_ids in enumerate(prompt_in_ids):
+                for g in range(G):
+                    idx = torch.tensor([p_ids], dtype=torch.long, device=device)
+                    out = policy.generate(idx, max_new_tokens = args.resp_len, temperature=2, top_k =3)
+                    full_ids = out[0].tolist()
+
+                    #split prompt/response
+                    boundary = len(p_ids[-block_size:]) #prompt lenght clipped to context
+                    resp_ids = full_ids[boundary:]
+                    r_scalar = compute_reward(rm, tok, batch_prompts[pid], resp_ids, device)
+
+                    seq_list.append(torch.tensor(full_ids, dtype=torch.long))
+                    boundary_list.append(boundary)
+                    prompt_id_of.append(pid)
+                    raw_rewards.append(r_scalar)
+
+        #---PAD TO BATCH ----
+        B = len(seq_list)  # B = P*G
     
