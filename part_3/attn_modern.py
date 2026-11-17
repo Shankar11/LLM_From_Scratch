@@ -45,13 +45,13 @@ class CausalSelfAttentionModern(nn.Module):
 
         #projections
         q= self.wq(x).view(B, T, self.n_head, self.d_head).transpose(1,2) # (B,H, T,D)
-        k= self.wk(x).view(B, T, self.n_kv_head , self.d_head).transpose(1,2) #(B,Hk, D)
-        v= self.vk(x).view(B, T, self.n_kv_head, self.d_head).transpose(1,2)  #(B,Hk, D)
+        k= self.wk(x).view(B, T, self.n_kv_head , self.d_head).transpose(1,2) #(B,Hk, T, D)
+        v= self.wv(x).view(B, T, self.n_kv_head, self.d_head).transpose(1,2)  #(B,Hk, T, D)
 
         #RoPE on *current* tokens ( cached keys are already rotated)
         if self.use_rope:
             pos = torch.arange(start_pos, start_pos + T, device = x.device)
-            cos, sin = self.rope.get(pos)
+            cos, sin = self.rope_cache.get(pos)
             q = apply_rope_single(q, cos, sin) # (B, H, T, D)
             k = apply_rope_single(k, cos, sin) # (B,Hk, T, D)
 

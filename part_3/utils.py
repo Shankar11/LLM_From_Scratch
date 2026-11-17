@@ -13,7 +13,7 @@ def top_k_top_p_filtering(logits: torch.Tensor, top_k: int | None = None, top_p 
 
     if top_k is not None and top_k < V:
         topk_vals, _ = torch.topk(filtered, top_k, dim =-1)
-        kth = topk_vals[:-1].unsqueeze(-1)
+        kth = topk_vals[:,-1].unsqueeze(-1)
         filtered[filtered < kth] = float('-inf')
 
     if top_p is not None and 0 < top_p < 1.0:

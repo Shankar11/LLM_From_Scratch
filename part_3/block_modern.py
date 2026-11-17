@@ -4,7 +4,7 @@ from swiglu import SwiGLU
 from attn_modern import CausalSelfAttentionModern
 
 class TransformerBlockModern(nn.Module):
-    def __init__(self, n_embd:int, n_head:int, dropout: flaot =0.0,
+    def __init__(self, n_embd:int, n_head:int, dropout: float =0.0,
                  use_rmsnorm: bool = True, use_swiglu: bool = True,
                  rope: bool = True, max_pos: int=4096,
                  sliding_window: int | None = None, attention_sink: int=0, n_kv_head: int | None = None):

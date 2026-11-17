@@ -19,7 +19,7 @@ if __name__ == '__main__':
     device = torch.device('cuda' if torch.cuda.is_available() and not args.cpu else 'cpu')
 
     tok = ByteTokenizer()
-    model = GPTModern(vocab_size = tok.vocab.size, block_size =128, n_layer=2, n_head=4, n_embd=128,
+    model = GPTModern(vocab_size = tok.vocab_size, block_size =128, n_layer=2, n_head=4, n_embd=128,
                       use_rmsnorm = args.rmsnorm, use_swiglu = args.swiglu, rope = args.rope,
                       max_pos = 4096, sliding_window = args.sliding_window, attention_sink = args.sink, 
                       n_kv_head = args.group_size).to(device)
@@ -31,6 +31,12 @@ if __name__ == '__main__':
         start = time.time()
         out= model.generate(prompt, max_new_tokens = args.tokens, temperature =0.0, top_k= 50, top_p = None,
                             sliding_window = args.sliding_window, attention_sink = args.sink)
+        print(f"Generated {args.tokens} tokens in {time.time() - start:.2f} sec")
+
+        start = time.time()
+        out_nocache= model.generate_nocache(prompt, max_new_tokens = args.tokens, temperature =0.0, top_k= 50, top_p = None,
+                                    sliding_window = args.sliding_window, attention_sink = args.sink)
+        
         print(f"(nocache) generated {args.tokens} tokens in {time.time() - start:.2f} sec")
 
     print(tok.decode(out[0].cpu()))

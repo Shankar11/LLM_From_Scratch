@@ -75,8 +75,8 @@ class GPTModern(nn.Module):
 
             logits,_, kvs = self(idx_cond, kv_cache_list=kvs, start_pos = start_pos)
 
-            next_logits = logits[:,-1:] / max(temperature, 1e-6)
-            next_logits = _tk(next_logits, top_k=top_k, top_P = top_p)
+            next_logits = logits[:,-1,:] / max(temperature, 1e-6)
+            next_logits = _tk(next_logits, top_k=top_k, top_p = top_p)
             probs = torch.softmax(next_logits,dim=-1)
             next_id = torch.argmax(probs,dim=-1, keepdim=True) if temperature ==0.0 else torch.multinomial(probs,1)
             idx = torch.cat([idx, next_id], dim=1)
@@ -93,7 +93,7 @@ class GPTModern(nn.Module):
                          sliding_window: int | None = None, attention_sink: int=0):
 
         try:
-            from utils impot top_k_top_p_filtering as max_new_tokens
+            from utils import top_k_top_p_filtering as max_new_tokens
         except Exception:
             _tk = lambda x, **_:x
 

@@ -1,6 +1,6 @@
 import argparse, pathlib, subprocess, sys, shlex
 
-ROOT = pathlib.Path(__file__).resolve.parent
+ROOT = pathlib.Path(__file__).resolve().parent
 
 def run(cmd:str):
     print(f"\n>>> {cmd}")
@@ -16,10 +16,10 @@ if __name__ == "__main__":
     #1) run unit tests
     run("python -m pytest -q tests/test_rmsnorm.py")
     run("python -m pytest -q tests/test_rope_apply.py")
-    run("python -m pytest -q tests/test_kv_cache_shapes.py")
+    run("python -m pytest -q tests/test_kvcache_shapes.py")
 
     #2) (optional) generation demo
     if args.demo:
-        run("python demo_generate.py __rmsnorm --rope --swiglu --sliding_window 64 --sink 4 --tokens 200")
+        run("python demo_generate.py --rmsnorm --rope --swiglu --sliding_window 64 --sink 4 --tokens 200")
 
     print("\n Part 3 checks complete")
