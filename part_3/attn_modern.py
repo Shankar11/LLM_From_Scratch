@@ -65,8 +65,8 @@ class CausalSelfAttentionModern(nn.Module):
         #sliding window + attention sink (crop along seq length)
         if self.sliding_window is not None and k_all.size(2) > (self.sliding_window + self.attention_sink):
             s = self.attention_sink
-            k_all = torch.cat([k_all[:,:,s,:], k_all[:,:,-self.sliding_window,:]], dim=2)
-            v_all = torch.cat([v_all[:,:,s,:], v_all[:,:,-self.sliding_window,:]], dim=2)
+            k_all = torch.cat([k_all[:,:,:s,:], k_all[:,:,-self.sliding_window:,:]], dim=2)
+            v_all = torch.cat([v_all[:,:,:s,:], v_all[:,:,-self.sliding_window:,:]], dim=2)
 
         # GQA expand: repeat K/V heads to match  Q heads before attention
         if self.n_kv_head != self.n_head:

@@ -17,7 +17,7 @@ class GPTModern(nn.Module):
                  max_pos: int = 4096, sliding_window: int | None = None, attention_sink: int=0, n_kv_head: int | None = None):
         super().__init__()
         self.block_size = block_size
-        self.tok_embd = nn.Embedding(vocab_size, n_embd)
+        self.tok_emb = nn.Embedding(vocab_size, n_embd)
         # self.pos_emb = nn.Embedding(block_size, n_embd)
         self.drop = nn.Dropout(dropout)
         self.blocks = nn.ModuleList([
@@ -33,7 +33,7 @@ class GPTModern(nn.Module):
         B, T = idx.shape
         assert T <= self.block_size
         pos = torch.arange(0, T, device=idx.device).unsqueeze(0)
-        x=self.tok_embd(idx)
+        x=self.tok_emb(idx)
         #+ self.pos_emb(pos)
         x = self.drop(x)
 
@@ -93,7 +93,7 @@ class GPTModern(nn.Module):
                          sliding_window: int | None = None, attention_sink: int=0):
 
         try:
-            from utils import top_k_top_p_filtering as max_new_tokens
+            from utils import top_k_top_p_filtering as _tk
         except Exception:
             _tk = lambda x, **_:x
 
